@@ -1,6 +1,7 @@
 import headerFunc from "./header.js"
 import productFunc from "./product.js"
 import searchFunc from "./search.js"
+import { initAuth } from "./auth.js"
 
 //! add product to localstorage start
 
@@ -64,3 +65,6 @@ if (modal) {
 
 
 //! modal dialog end
+
+//! initialize authentication
+initAuth()

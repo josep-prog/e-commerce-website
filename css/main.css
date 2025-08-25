@@ -6,8 +6,9 @@
 @import url(layout/footer.css);
 
 /* ! components */
-@import url(components/modal-search.css);
-@import url(components/modal-dialog.css);
+@import url("components/modal-search.css");
+@import url("components/modal-dialog.css");
+@import url("auth.css");
 @import url(components/slider.css);
 @import url(components/category-item.css);
 @import url(components/product-item.css);

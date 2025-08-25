@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Bootstrap icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="../css/main.css" />
+  <title>Clients Management | Admin Dashboard</title>
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-brand">E-Commerce Admin</a>
+      </div>
+      <nav>
+        <ul class="sidebar-nav">
+          <li class="sidebar-nav-item">
+            <a href="dashboard.html" class="sidebar-nav-link">
+              <i class="bi bi-speedometer2"></i>
+              Dashboard
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="orders.html" class="sidebar-nav-link">
+              <i class="bi bi-cart-check"></i>
+              Orders
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="clients.html" class="sidebar-nav-link active">
+              <i class="bi bi-people"></i>
+              Clients
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="products.html" class="sidebar-nav-link">
+              <i class="bi bi-box-seam"></i>
+              Products
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="../" class="sidebar-nav-link">
+              <i class="bi bi-house"></i>
+              Back to Store
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <h1 class="dashboard-title">Clients Management</h1>
+        <div class="user-profile">
+          <button class="profile-button">
+            <i class="bi bi-person-circle"></i>
+            <span class="user-name">Admin</span>
+          </button>
+          <div class="user-profile-dropdown">
+            <div class="dropdown-header">
+              <div class="user-info">
+                <div class="user-name">Admin User</div>
+                <div class="user-email">admin@store.com</div>
+              </div>
+            </div>
+            <div class="dropdown-body">
+              <a href="profile.html" class="dropdown-item">
+                <i class="bi bi-person"></i>
+                Profile
+              </a>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item logout-button">
+                <i class="bi bi-box-arrow-right"></i>
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="dashboard-content">
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+          <div class="col">
+            <div class="card">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h3 class="card-title">Total Clients</h3>
+                    <p class="text-muted mb-0" id="total-clients">Loading...</p>
+                  </div>
+                  <div class="text-primary">
+                    <i class="bi bi-people" style="font-size: 2rem;"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h3 class="card-title">New This Month</h3>
+                    <p class="text-muted mb-0" id="new-clients">Loading...</p>
+                  </div>
+                  <div class="text-success">
+                    <i class="bi bi-person-plus" style="font-size: 2rem;"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h3 class="card-title">Active Clients</h3>
+                    <p class="text-muted mb-0" id="active-clients">Loading...</p>
+                  </div>
+                  <div class="text-info">
+                    <i class="bi bi-person-check" style="font-size: 2rem;"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h3 class="card-title">Total Orders</h3>
+                    <p class="text-muted mb-0" id="clients-total-orders">Loading...</p>
+                  </div>
+                  <div class="text-warning">
+                    <i class="bi bi-cart-check" style="font-size: 2rem;"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col">
+                <div class="form-group mb-0">
+                  <label class="form-label">Search Clients</label>
+                  <input type="text" class="form-control" id="search-input" placeholder="Search by name, email...">
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="form-group mb-0">
+                  <label class="form-label">Role Filter</label>
+                  <select class="form-control" id="role-filter">
+                    <option value="">All Users</option>
+                    <option value="client">Clients Only</option>
+                    <option value="admin">Admins Only</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="form-group mb-0">
+                  <label class="form-label">&nbsp;</label>
+                  <button class="btn btn-primary d-block" onclick="loadClients()">
+                    <i class="bi bi-search"></i>
+                    Search
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clients Table -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">All Clients</h2>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Avatar</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Role</th>
+                    <th>Joined</th>
+                    <th>Orders</th>
+                    <th>Total Spent</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="clients-table">
+                  <tr>
+                    <td colspan="9" class="text-center">Loading clients...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Client Details Modal -->
+  <div id="client-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="modal-header">
+        <h3>Client Details</h3>
+        <button class="modal-close" onclick="closeClientModal()">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="client-details">
+        <!-- Client details will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { requireAdmin } from '../js/auth.js'
+    import { db } from '../js/supabase.js'
+
+    // Check admin access
+    if (!(await requireAdmin())) {
+      throw new Error('Access denied')
+    }
+
+    let allClients = []
+    let filteredClients = []
+    let clientOrders = {}
+
+    // Load all clients and their statistics
+    async function loadClients() {
+      try {
+        // Load users and orders
+        const [usersResult, ordersResult] = await Promise.all([
+          db.getUsers(),
+          db.getOrders()
+        ])
+        
+        if (usersResult.error || ordersResult.error) {
+          console.error('Error loading data:', usersResult.error || ordersResult.error)
+          return
+        }
+
+        allClients = usersResult.data || []
+        const orders = ordersResult.data || []
+
+        // Process order statistics for each client
+        clientOrders = {}
+        orders.forEach(order => {
+          if (!clientOrders[order.user_id]) {
+            clientOrders[order.user_id] = {
+              count: 0,
+              totalSpent: 0
+            }
+          }
+          clientOrders[order.user_id].count++
+          clientOrders[order.user_id].totalSpent += parseFloat(order.total_amount)
+        })
+
+        // Update statistics
+        updateStatistics()
+        
+        // Apply filters and render
+        applyFilters()
+        
+      } catch (error) {
+        console.error('Error loading clients:', error)
+      }
+    }
+
+    // Update statistics cards
+    function updateStatistics() {
+      const totalClients = allClients.filter(user => user.role === 'client').length
+      const thisMonth = new Date()
+      thisMonth.setMonth(thisMonth.getMonth())
+      thisMonth.setDate(1)
+      
+      const newThisMonth = allClients.filter(user => 
+        user.role === 'client' && new Date(user.created_at) >= thisMonth
+      ).length
+
+      const activeClients = allClients.filter(user => 
+        user.role === 'client' && clientOrders[user.id]?.count > 0
+      ).length
+
+      const totalOrdersFromClients = Object.values(clientOrders).reduce((sum, stats) => sum + stats.count, 0)
+
+      document.getElementById('total-clients').textContent = totalClients
+      document.getElementById('new-clients').textContent = newThisMonth
+      document.getElementById('active-clients').textContent = activeClients
+      document.getElementById('clients-total-orders').textContent = totalOrdersFromClients
+    }
+
+    // Apply search and role filters
+    function applyFilters() {
+      const searchTerm = document.getElementById('search-input').value.toLowerCase()
+      const roleFilter = document.getElementById('role-filter').value
+
+      filteredClients = allClients.filter(client => {
+        const matchesSearch = !searchTerm || 
+          (client.full_name || '').toLowerCase().includes(searchTerm) ||
+          client.email.toLowerCase().includes(searchTerm) ||
+          (client.phone || '').toLowerCase().includes(searchTerm)
+        
+        const matchesRole = !roleFilter || client.role === roleFilter
+
+        return matchesSearch && matchesRole
+      })
+
+      renderClients()
+    }
+
+    // Render clients table
+    function renderClients() {
+      const tbody = document.getElementById('clients-table')
+      
+      if (filteredClients.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No clients found</td></tr>'
+        return
+      }
+
+      tbody.innerHTML = filteredClients.map(client => {
+        const clientStats = clientOrders[client.id] || { count: 0, totalSpent: 0 }
+        
+        return `
+          <tr>
+            <td>
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: #007bff; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                ${(client.full_name || client.email || 'U').charAt(0).toUpperCase()}
+              </div>
+            </td>
+            <td>
+              <div>
+                <div><strong>${client.full_name || 'Not provided'}</strong></div>
+                <small class="text-muted">#${client.id.slice(0, 8)}...</small>
+              </div>
+            </td>
+            <td>${client.email}</td>
+            <td>${client.phone || 'Not provided'}</td>
+            <td>
+              <span class="badge badge-${client.role === 'admin' ? 'danger' : 'primary'}">
+                ${client.role}
+              </span>
+            </td>
+            <td>${new Date(client.created_at).toLocaleDateString()}</td>
+            <td>${clientStats.count}</td>
+            <td>$${clientStats.totalSpent.toFixed(2)}</td>
+            <td>
+              <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary" onclick="viewClient('${client.id}')">
+                  <i class="bi bi-eye"></i>
+                  View
+                </button>
+                ${client.role !== 'admin' ? `
+                  <select class="form-control form-control-sm" onchange="updateUserRole('${client.id}', this.value)" style="min-width: 100px;">
+                    <option value="">Change Role</option>
+                    <option value="client" ${client.role === 'client' ? 'disabled' : ''}>Client</option>
+                    <option value="admin" ${client.role === 'admin' ? 'disabled' : ''}>Admin</option>
+                  </select>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `
+      }).join('')
+    }
+
+    // View client details
+    window.viewClient = async function(clientId) {
+      try {
+        const client = allClients.find(c => c.id === clientId)
+        if (!client) return
+
+        const clientStats = clientOrders[client.id] || { count: 0, totalSpent: 0 }
+
+        // Get client's recent orders
+        const { data: orders } = await db.getOrders(client.id)
+        const recentOrders = (orders || []).slice(0, 5)
+
+        const clientDetailsHtml = `
+          <div class="row">
+            <div class="col-md-6">
+              <h4>Client Information</h4>
+              <table class="table">
+                <tr><td><strong>Name:</strong></td><td>${client.full_name || 'Not provided'}</td></tr>
+                <tr><td><strong>Email:</strong></td><td>${client.email}</td></tr>
+                <tr><td><strong>Phone:</strong></td><td>${client.phone || 'Not provided'}</td></tr>
+                <tr><td><strong>Role:</strong></td><td>
+                  <span class="badge badge-${client.role === 'admin' ? 'danger' : 'primary'}">
+                    ${client.role}
+                  </span>
+                </td></tr>
+                <tr><td><strong>Joined:</strong></td><td>${new Date(client.created_at).toLocaleString()}</td></tr>
+                <tr><td><strong>Last Updated:</strong></td><td>${new Date(client.updated_at).toLocaleString()}</td></tr>
+              </table>
+            </div>
+            <div class="col-md-6">
+              <h4>Order Statistics</h4>
+              <table class="table">
+                <tr><td><strong>Total Orders:</strong></td><td>${clientStats.count}</td></tr>
+                <tr><td><strong>Total Spent:</strong></td><td><strong>$${clientStats.totalSpent.toFixed(2)}</strong></td></tr>
+                <tr><td><strong>Average Order:</strong></td><td>$${clientStats.count > 0 ? (clientStats.totalSpent / clientStats.count).toFixed(2) : '0.00'}</td></tr>
+              </table>
+              ${client.address ? `
+                <h4>Address</h4>
+                <address>
+                  ${typeof client.address === 'object' ? formatAddress(client.address) : client.address}
+                </address>
+              ` : ''}
+            </div>
+          </div>
+          
+          ${recentOrders.length > 0 ? `
+            <div class="row">
+              <div class="col-12">
+                <h4>Recent Orders</h4>
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Order #</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Total</th>
+                        <th>Items</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${recentOrders.map(order => `
+                        <tr>
+                          <td>${order.order_number}</td>
+                          <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                          <td>
+                            <span class="badge badge-${getStatusColor(order.status)}">
+                              ${order.status}
+                            </span>
+                          </td>
+                          <td>$${parseFloat(order.total_amount).toFixed(2)}</td>
+                          <td>${order.order_items?.length || 0}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          ` : '<p class="text-muted">No orders found for this client.</p>'}
+        `
+
+        document.getElementById('client-details').innerHTML = clientDetailsHtml
+        document.getElementById('client-modal').style.display = 'flex'
+        
+      } catch (error) {
+        console.error('Error loading client details:', error)
+      }
+    }
+
+    // Close client modal
+    window.closeClientModal = function() {
+      document.getElementById('client-modal').style.display = 'none'
+    }
+
+    // Update user role
+    window.updateUserRole = async function(userId, newRole) {
+      if (!newRole || !confirm(`Are you sure you want to change this user's role to ${newRole}?`)) {
+        return
+      }
+
+      try {
+        const { error } = await db.updateUserRole(userId, newRole)
+        
+        if (error) {
+          alert('Error updating user role')
+          return
+        }
+
+        // Update local data
+        const client = allClients.find(c => c.id === userId)
+        if (client) {
+          client.role = newRole
+        }
+
+        // Re-render table and statistics
+        updateStatistics()
+        applyFilters()
+        
+        // Show success message
+        showToast('User role updated successfully', 'success')
+        
+      } catch (error) {
+        console.error('Error updating user role:', error)
+        alert('Error updating user role')
+      }
+    }
+
+    // Utility functions
+    function getStatusColor(status) {
+      const colors = {
+        'pending': 'warning',
+        'processing': 'primary',
+        'shipped': 'info',
+        'delivered': 'success',
+        'cancelled': 'danger'
+      }
+      return colors[status] || 'secondary'
+    }
+
+    function formatAddress(address) {
+      if (typeof address === 'string') {
+        return address
+      }
+      if (typeof address === 'object') {
+        return `
+          ${address.street || ''}<br>
+          ${address.city || ''}, ${address.state || ''} ${address.postal_code || ''}<br>
+          ${address.country || ''}
+        `
+      }
+      return 'Not provided'
+    }
+
+    function showToast(message, type = 'info') {
+      alert(message) // Temporary implementation
+    }
+
+    // Event listeners
+    document.getElementById('search-input').addEventListener('input', applyFilters)
+    document.getElementById('role-filter').addEventListener('change', applyFilters)
+
+    // Click outside modal to close
+    document.getElementById('client-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'client-modal') {
+        closeClientModal()
+      }
+    })
+
+    // Make functions global
+    window.loadClients = loadClients
+
+    // Initialize
+    loadClients()
+  </script>
+
+  <style>
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      width: 90%;
+      max-height: 90%;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .form-control-sm {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+  </style>
+</body>
+
+</html>

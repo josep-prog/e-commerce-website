@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Bootstrap icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="../css/main.css" />
+  <title>Browse Products | My Dashboard</title>
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-brand">My Account</a>
+      </div>
+      <nav>
+        <ul class="sidebar-nav">
+          <li class="sidebar-nav-item">
+            <a href="dashboard.html" class="sidebar-nav-link">
+              <i class="bi bi-speedometer2"></i>
+              Dashboard
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="products.html" class="sidebar-nav-link active">
+              <i class="bi bi-box-seam"></i>
+              Browse Products
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="orders.html" class="sidebar-nav-link">
+              <i class="bi bi-cart-check"></i>
+              My Orders
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="profile.html" class="sidebar-nav-link">
+              <i class="bi bi-person"></i>
+              My Profile
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="../" class="sidebar-nav-link">
+              <i class="bi bi-house"></i>
+              Back to Store
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <h1 class="dashboard-title">Browse Products</h1>
+        <div class="user-profile">
+          <button class="profile-button">
+            <i class="bi bi-person-circle"></i>
+            <span class="user-name">Loading...</span>
+          </button>
+          <div class="user-profile-dropdown">
+            <div class="dropdown-header">
+              <div class="user-info">
+                <div class="user-name">Loading...</div>
+                <div class="user-email">Loading...</div>
+              </div>
+            </div>
+            <div class="dropdown-body">
+              <a href="profile.html" class="dropdown-item">
+                <i class="bi bi-person"></i>
+                Profile
+              </a>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item logout-button">
+                <i class="bi bi-box-arrow-right"></i>
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="dashboard-content">
+        <!-- Search and Filters -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col">
+                <div class="form-group mb-0">
+                  <label class="form-label">Search Products</label>
+                  <input type="text" class="form-control" id="search-input" placeholder="Search by name...">
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="form-group mb-0">
+                  <label class="form-label">Category</label>
+                  <select class="form-control" id="category-filter">
+                    <option value="">All Categories</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="form-group mb-0">
+                  <label class="form-label">Sort By</label>
+                  <select class="form-control" id="sort-filter">
+                    <option value="name">Name</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="newest">Newest First</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="form-group mb-0">
+                  <label class="form-label">&nbsp;</label>
+                  <button class="btn btn-primary d-block" onclick="loadProducts()">
+                    <i class="bi bi-search"></i>
+                    Search
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">All Products</h2>
+          </div>
+          <div class="card-body">
+            <div class="row" id="products-grid">
+              <div class="col-12 text-center">
+                <p>Loading products...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Product Details Modal -->
+  <div id="product-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 id="modal-product-name">Product Details</h3>
+        <button class="modal-close" onclick="closeProductModal()">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="product-details">
+        <!-- Product details will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { requireAuth } from '../js/auth.js'
+    import { db } from '../js/supabase.js'
+
+    // Check authentication
+    if (!requireAuth()) {
+      throw new Error('Authentication required')
+    }
+
+    let allProducts = []
+    let filteredProducts = []
+    let categories = []
+
+    // Load all products and categories
+    async function loadProducts() {
+      try {
+        const [productsResult, categoriesResult] = await Promise.all([
+          db.getProducts(),
+          db.getCategories()
+        ])
+        
+        if (productsResult.error || categoriesResult.error) {
+          console.error('Error loading data:', productsResult.error || categoriesResult.error)
+          return
+        }
+
+        allProducts = productsResult.data || []
+        categories = categoriesResult.data || []
+
+        // Populate category filter
+        populateCategoryFilter()
+        
+        // Apply filters and render
+        applyFilters()
+        
+      } catch (error) {
+        console.error('Error loading products:', error)
+      }
+    }
+
+    // Populate category dropdown
+    function populateCategoryFilter() {
+      const categoryFilter = document.getElementById('category-filter')
+      categoryFilter.innerHTML = '<option value="">All Categories</option>'
+      
+      categories.forEach(category => {
+        categoryFilter.innerHTML += `<option value="${category.id}">${category.name}</option>`
+      })
+    }
+
+    // Apply filters and sorting
+    function applyFilters() {
+      const searchTerm = document.getElementById('search-input').value.toLowerCase()
+      const categoryFilter = document.getElementById('category-filter').value
+      const sortFilter = document.getElementById('sort-filter').value
+
+      // Filter products
+      filteredProducts = allProducts.filter(product => {
+        const matchesSearch = !searchTerm || product.name.toLowerCase().includes(searchTerm)
+        const matchesCategory = !categoryFilter || product.category_id === categoryFilter
+        return matchesSearch && matchesCategory && product.is_active
+      })
+
+      // Sort products
+      filteredProducts.sort((a, b) => {
+        switch (sortFilter) {
+          case 'price-low':
+            return parseFloat(a.price) - parseFloat(b.price)
+          case 'price-high':
+            return parseFloat(b.price) - parseFloat(a.price)
+          case 'newest':
+            return new Date(b.created_at) - new Date(a.created_at)
+          case 'name':
+          default:
+            return a.name.localeCompare(b.name)
+        }
+      })
+
+      renderProducts()
+    }
+
+    // Render products grid
+    function renderProducts() {
+      const container = document.getElementById('products-grid')
+      
+      if (filteredProducts.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center"><p class="text-muted">No products found</p></div>'
+        return
+      }
+
+      container.innerHTML = filteredProducts.map(product => `
+        <div class="col-md-4 col-lg-3 mb-4">
+          <div class="card h-100 product-card">
+            <div class="position-relative">
+              <img src="${product.image_url || '../img/placeholder.jpg'}" 
+                   class="card-img-top" 
+                   alt="${product.name}"
+                   style="height: 250px; object-fit: cover; cursor: pointer;"
+                   onclick="viewProduct('${product.id}')">
+              ${product.discount_percentage > 0 ? `
+                <span class="badge badge-danger position-absolute" style="top: 10px; right: 10px;">
+                  -${product.discount_percentage}%
+                </span>
+              ` : ''}
+              ${product.is_featured ? `
+                <span class="badge badge-warning position-absolute" style="top: 10px; left: 10px;">
+                  Featured
+                </span>
+              ` : ''}
+            </div>
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">${product.name}</h5>
+              <p class="card-text text-muted small flex-grow-1">
+                ${product.description?.substring(0, 100) || 'No description available'}${product.description?.length > 100 ? '...' : ''}
+              </p>
+              <div class="mt-auto">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <span class="h5 text-primary mb-0">$${parseFloat(product.price).toFixed(2)}</span>
+                    ${product.old_price ? `<br><small class="text-muted"><del>$${parseFloat(product.old_price).toFixed(2)}</del></small>` : ''}
+                  </div>
+                  <div class="text-muted small">
+                    <i class="bi bi-box"></i>
+                    Stock: ${product.stock_quantity}
+                  </div>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-primary btn-sm flex-grow-1" onclick="viewProduct('${product.id}')">
+                    <i class="bi bi-eye"></i>
+                    View Details
+                  </button>
+                  <button class="btn btn-primary btn-sm" onclick="addToCart('${product.id}')" ${product.stock_quantity <= 0 ? 'disabled' : ''}>
+                    <i class="bi bi-cart-plus"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('')
+    }
+
+    // View product details
+    window.viewProduct = function(productId) {
+      const product = allProducts.find(p => p.id === productId)
+      if (!product) return
+
+      document.getElementById('modal-product-name').textContent = product.name
+
+      const productDetailsHtml = `
+        <div class="row">
+          <div class="col-md-6">
+            <img src="${product.image_url || '../img/placeholder.jpg'}" 
+                 alt="${product.name}" 
+                 class="img-fluid rounded">
+            ${product.discount_percentage > 0 ? `
+              <div class="mt-2">
+                <span class="badge badge-danger">-${product.discount_percentage}% OFF</span>
+              </div>
+            ` : ''}
+          </div>
+          <div class="col-md-6">
+            <h4>${product.name}</h4>
+            <p class="text-muted">${product.description || 'No description available'}</p>
+            
+            <div class="mb-3">
+              <div class="d-flex align-items-center gap-2">
+                <span class="h4 text-primary mb-0">$${parseFloat(product.price).toFixed(2)}</span>
+                ${product.old_price ? `<span class="text-muted"><del>$${parseFloat(product.old_price).toFixed(2)}</del></span>` : ''}
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <small class="text-muted">
+                <i class="bi bi-tag"></i>
+                Category: ${product.categories?.name || 'Uncategorized'}
+              </small>
+            </div>
+            
+            <div class="mb-3">
+              <small class="text-muted">
+                <i class="bi bi-box"></i>
+                Stock: ${product.stock_quantity} available
+              </small>
+            </div>
+            
+            ${product.sku ? `
+              <div class="mb-3">
+                <small class="text-muted">SKU: ${product.sku}</small>
+              </div>
+            ` : ''}
+            
+            <div class="d-flex gap-2">
+              <div class="form-group flex-grow-1">
+                <label class="form-label">Quantity</label>
+                <input type="number" class="form-control" id="quantity-input" value="1" min="1" max="${product.stock_quantity}">
+              </div>
+              <div class="form-group">
+                <label class="form-label">&nbsp;</label>
+                <button class="btn btn-primary d-block" onclick="addToCartWithQuantity('${product.id}')" ${product.stock_quantity <= 0 ? 'disabled' : ''}>
+                  <i class="bi bi-cart-plus"></i>
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+
+      document.getElementById('product-details').innerHTML = productDetailsHtml
+      document.getElementById('product-modal').style.display = 'flex'
+    }
+
+    // Close product modal
+    window.closeProductModal = function() {
+      document.getElementById('product-modal').style.display = 'none'
+    }
+
+    // Add to cart with quantity
+    window.addToCartWithQuantity = function(productId) {
+      const quantity = parseInt(document.getElementById('quantity-input').value)
+      addToCart(productId, quantity)
+      closeProductModal()
+    }
+
+    // Add to cart function
+    window.addToCart = function(productId, quantity = 1) {
+      const product = allProducts.find(p => p.id === productId)
+      if (!product || product.stock_quantity < quantity) {
+        alert('Product not available or insufficient stock')
+        return
+      }
+
+      // Get existing cart or create new one
+      let cart = JSON.parse(localStorage.getItem('cart') || '[]')
+      
+      // Check if product already in cart
+      const existingItem = cart.find(item => item.id === productId)
+      
+      if (existingItem) {
+        existingItem.quantity += quantity
+        // Make sure we don't exceed stock
+        if (existingItem.quantity > product.stock_quantity) {
+          existingItem.quantity = product.stock_quantity
+        }
+      } else {
+        cart.push({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image_url,
+          quantity: quantity,
+          stock: product.stock_quantity
+        })
+      }
+
+      // Update localStorage
+      localStorage.setItem('cart', JSON.stringify(cart))
+      
+      // Update cart count in header
+      updateCartCount()
+      
+      // Show success message
+      showToast(`${product.name} added to cart!`, 'success')
+    }
+
+    // Update cart count
+    function updateCartCount() {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]')
+      const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0)
+      
+      // Update any cart count elements on the page
+      const cartCountElements = document.querySelectorAll('.header-cart-count')
+      cartCountElements.forEach(el => {
+        el.textContent = cartCount
+      })
+    }
+
+    function showToast(message, type = 'info') {
+      alert(message) // Temporary implementation
+    }
+
+    // Event listeners
+    document.getElementById('search-input').addEventListener('input', applyFilters)
+    document.getElementById('category-filter').addEventListener('change', applyFilters)
+    document.getElementById('sort-filter').addEventListener('change', applyFilters)
+
+    // Click outside modal to close
+    document.getElementById('product-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'product-modal') {
+        closeProductModal()
+      }
+    })
+
+    // Make functions global
+    window.loadProducts = loadProducts
+
+    // Initialize
+    loadProducts()
+  </script>
+
+  <style>
+    .product-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .product-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .position-relative {
+      position: relative;
+    }
+
+    .position-absolute {
+      position: absolute;
+    }
+
+    .flex-grow-1 {
+      flex-grow: 1;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      width: 90%;
+      max-height: 90%;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+  </style>
+</body>
+
+</html>

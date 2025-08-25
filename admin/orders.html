@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Bootstrap icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="../css/main.css" />
+  <title>Orders Management | Admin Dashboard</title>
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-brand">E-Commerce Admin</a>
+      </div>
+      <nav>
+        <ul class="sidebar-nav">
+          <li class="sidebar-nav-item">
+            <a href="dashboard.html" class="sidebar-nav-link">
+              <i class="bi bi-speedometer2"></i>
+              Dashboard
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="orders.html" class="sidebar-nav-link active">
+              <i class="bi bi-cart-check"></i>
+              Orders
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="clients.html" class="sidebar-nav-link">
+              <i class="bi bi-people"></i>
+              Clients
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="products.html" class="sidebar-nav-link">
+              <i class="bi bi-box-seam"></i>
+              Products
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="../" class="sidebar-nav-link">
+              <i class="bi bi-house"></i>
+              Back to Store
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <h1 class="dashboard-title">Orders Management</h1>
+        <div class="user-profile">
+          <button class="profile-button">
+            <i class="bi bi-person-circle"></i>
+            <span class="user-name">Admin</span>
+          </button>
+          <div class="user-profile-dropdown">
+            <div class="dropdown-header">
+              <div class="user-info">
+                <div class="user-name">Admin User</div>
+                <div class="user-email">admin@store.com</div>
+              </div>
+            </div>
+            <div class="dropdown-body">
+              <a href="profile.html" class="dropdown-item">
+                <i class="bi bi-person"></i>
+                Profile
+              </a>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item logout-button">
+                <i class="bi bi-box-arrow-right"></i>
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="dashboard-content">
+        <!-- Filters and Search -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col">
+                <div class="form-group mb-0">
+                  <label class="form-label">Search Orders</label>
+                  <input type="text" class="form-control" id="search-input" placeholder="Search by order number, customer name...">
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="form-group mb-0">
+                  <label class="form-label">Status Filter</label>
+                  <select class="form-control" id="status-filter">
+                    <option value="">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="form-group mb-0">
+                  <label class="form-label">&nbsp;</label>
+                  <button class="btn btn-primary d-block" onclick="loadOrders()">
+                    <i class="bi bi-search"></i>
+                    Search
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">All Orders</h2>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Order #</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Payment</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="orders-table">
+                  <tr>
+                    <td colspan="8" class="text-center">Loading orders...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Order Details Modal -->
+  <div id="order-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-header">
+        <h3>Order Details</h3>
+        <button class="modal-close" onclick="closeOrderModal()">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="order-details">
+        <!-- Order details will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { requireAdmin } from '../js/auth.js'
+    import { db } from '../js/supabase.js'
+
+    // Check admin access
+    if (!(await requireAdmin())) {
+      throw new Error('Access denied')
+    }
+
+    let allOrders = []
+    let filteredOrders = []
+
+    // Load all orders
+    async function loadOrders() {
+      try {
+        const { data: orders, error } = await db.getOrders()
+        
+        if (error) {
+          console.error('Error loading orders:', error)
+          return
+        }
+
+        allOrders = orders || []
+        applyFilters()
+        
+      } catch (error) {
+        console.error('Error loading orders:', error)
+      }
+    }
+
+    // Apply search and status filters
+    function applyFilters() {
+      const searchTerm = document.getElementById('search-input').value.toLowerCase()
+      const statusFilter = document.getElementById('status-filter').value
+
+      filteredOrders = allOrders.filter(order => {
+        const matchesSearch = !searchTerm || 
+          order.order_number.toLowerCase().includes(searchTerm) ||
+          (order.profiles?.full_name || '').toLowerCase().includes(searchTerm) ||
+          (order.profiles?.email || '').toLowerCase().includes(searchTerm)
+        
+        const matchesStatus = !statusFilter || order.status === statusFilter
+
+        return matchesSearch && matchesStatus
+      })
+
+      renderOrders()
+    }
+
+    // Render orders table
+    function renderOrders() {
+      const tbody = document.getElementById('orders-table')
+      
+      if (filteredOrders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No orders found</td></tr>'
+        return
+      }
+
+      tbody.innerHTML = filteredOrders.map(order => `
+        <tr>
+          <td>
+            <strong>${order.order_number}</strong>
+          </td>
+          <td>
+            <div>
+              <div>${order.profiles?.full_name || 'Unknown'}</div>
+              <small class="text-muted">${order.profiles?.email || ''}</small>
+            </div>
+          </td>
+          <td>${new Date(order.created_at).toLocaleDateString()}</td>
+          <td>${order.order_items?.length || 0} items</td>
+          <td>
+            <strong>$${parseFloat(order.total_amount).toFixed(2)}</strong>
+          </td>
+          <td>
+            <span class="badge badge-${getStatusColor(order.status)}">
+              ${order.status}
+            </span>
+          </td>
+          <td>
+            <span class="badge badge-${getPaymentStatusColor(order.payment_status)}">
+              ${order.payment_status}
+            </span>
+          </td>
+          <td>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-primary" onclick="viewOrder('${order.id}')">
+                <i class="bi bi-eye"></i>
+                View
+              </button>
+              <div class="btn-group">
+                <select class="form-control form-control-sm" onchange="updateOrderStatus('${order.id}', this.value)">
+                  <option value="">Update Status</option>
+                  <option value="pending" ${order.status === 'pending' ? 'disabled' : ''}>Pending</option>
+                  <option value="processing" ${order.status === 'processing' ? 'disabled' : ''}>Processing</option>
+                  <option value="shipped" ${order.status === 'shipped' ? 'disabled' : ''}>Shipped</option>
+                  <option value="delivered" ${order.status === 'delivered' ? 'disabled' : ''}>Delivered</option>
+                  <option value="cancelled" ${order.status === 'cancelled' ? 'disabled' : ''}>Cancelled</option>
+                </select>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `).join('')
+    }
+
+    // View order details
+    window.viewOrder = async function(orderId) {
+      try {
+        const order = allOrders.find(o => o.id === orderId)
+        if (!order) return
+
+        const orderDetailsHtml = `
+          <div class="row">
+            <div class="col-md-6">
+              <h4>Order Information</h4>
+              <table class="table">
+                <tr><td><strong>Order Number:</strong></td><td>${order.order_number}</td></tr>
+                <tr><td><strong>Date:</strong></td><td>${new Date(order.created_at).toLocaleString()}</td></tr>
+                <tr><td><strong>Status:</strong></td><td>
+                  <span class="badge badge-${getStatusColor(order.status)}">${order.status}</span>
+                </td></tr>
+                <tr><td><strong>Payment Status:</strong></td><td>
+                  <span class="badge badge-${getPaymentStatusColor(order.payment_status)}">${order.payment_status}</span>
+                </td></tr>
+                <tr><td><strong>Total:</strong></td><td><strong>$${parseFloat(order.total_amount).toFixed(2)}</strong></td></tr>
+              </table>
+            </div>
+            <div class="col-md-6">
+              <h4>Customer Information</h4>
+              <table class="table">
+                <tr><td><strong>Name:</strong></td><td>${order.profiles?.full_name || 'Unknown'}</td></tr>
+                <tr><td><strong>Email:</strong></td><td>${order.profiles?.email || 'Unknown'}</td></tr>
+                <tr><td><strong>Phone:</strong></td><td>${order.profiles?.phone || 'Not provided'}</td></tr>
+              </table>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <h4>Shipping Address</h4>
+              <address>
+                ${order.shipping_address ? formatAddress(order.shipping_address) : 'Not provided'}
+              </address>
+            </div>
+            <div class="col-md-6">
+              <h4>Order Items</h4>
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Qty</th>
+                      <th>Price</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${(order.order_items || []).map(item => `
+                      <tr>
+                        <td>${item.products?.name || 'Unknown Product'}</td>
+                        <td>${item.quantity}</td>
+                        <td>$${parseFloat(item.unit_price).toFixed(2)}</td>
+                        <td>$${parseFloat(item.total_price).toFixed(2)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        `
+
+        document.getElementById('order-details').innerHTML = orderDetailsHtml
+        document.getElementById('order-modal').style.display = 'flex'
+        
+      } catch (error) {
+        console.error('Error loading order details:', error)
+      }
+    }
+
+    // Close order modal
+    window.closeOrderModal = function() {
+      document.getElementById('order-modal').style.display = 'none'
+    }
+
+    // Update order status
+    window.updateOrderStatus = async function(orderId, newStatus) {
+      if (!newStatus) return
+
+      try {
+        const { error } = await db.updateOrderStatus(orderId, newStatus)
+        
+        if (error) {
+          alert('Error updating order status')
+          return
+        }
+
+        // Update local data
+        const order = allOrders.find(o => o.id === orderId)
+        if (order) {
+          order.status = newStatus
+        }
+
+        // Re-render table
+        applyFilters()
+        
+        // Show success message
+        showToast('Order status updated successfully', 'success')
+        
+      } catch (error) {
+        console.error('Error updating order status:', error)
+        alert('Error updating order status')
+      }
+    }
+
+    // Utility functions
+    function getStatusColor(status) {
+      const colors = {
+        'pending': 'warning',
+        'processing': 'primary',
+        'shipped': 'info',
+        'delivered': 'success',
+        'cancelled': 'danger'
+      }
+      return colors[status] || 'secondary'
+    }
+
+    function getPaymentStatusColor(status) {
+      const colors = {
+        'pending': 'warning',
+        'paid': 'success',
+        'failed': 'danger',
+        'refunded': 'info'
+      }
+      return colors[status] || 'secondary'
+    }
+
+    function formatAddress(address) {
+      if (typeof address === 'string') {
+        return address
+      }
+      if (typeof address === 'object') {
+        return `
+          ${address.street || ''}<br>
+          ${address.city || ''}, ${address.state || ''} ${address.postal_code || ''}<br>
+          ${address.country || ''}
+        `
+      }
+      return 'Not provided'
+    }
+
+    function showToast(message, type = 'info') {
+      // Implementation would go here - you can reuse the toast function from auth.js
+      alert(message) // Temporary implementation
+    }
+
+    // Event listeners
+    document.getElementById('search-input').addEventListener('input', applyFilters)
+    document.getElementById('status-filter').addEventListener('change', applyFilters)
+
+    // Click outside modal to close
+    document.getElementById('order-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'order-modal') {
+        closeOrderModal()
+      }
+    })
+
+    // Make functions global
+    window.loadOrders = loadOrders
+
+    // Initialize
+    loadOrders()
+  </script>
+
+  <style>
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      width: 90%;
+      max-height: 90%;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .btn-group {
+      display: inline-block;
+    }
+
+    .btn-group select {
+      min-width: 120px;
+    }
+  </style>
+</body>
+
+</html>
