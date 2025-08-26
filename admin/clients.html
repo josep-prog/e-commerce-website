@@ -194,13 +194,13 @@
                 <thead>
                   <tr>
                     <th>Avatar</th>
-                    <th>Name</th>
+                    <th>Client Name</th>
+                    <th>Client ID</th>
                     <th>Email</th>
-                    <th>Phone</th>
+                    <th>Contact Number</th>
+                    <th>Client Status</th>
                     <th>Role</th>
                     <th>Joined</th>
-                    <th>Orders</th>
-                    <th>Total Spent</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -351,31 +351,46 @@
             <td>
               <div>
                 <div><strong>${client.full_name || 'Not provided'}</strong></div>
-                <small class="text-muted">#${client.id.slice(0, 8)}...</small>
+                <small class="text-muted">${client.id.slice(0, 8)}...</small>
               </div>
+            </td>
+            <td>
+              <span class="badge badge-secondary">
+                ${client.id.slice(0, 8)}
+              </span>
             </td>
             <td>${client.email}</td>
             <td>${client.phone || 'Not provided'}</td>
             <td>
+              <span class="badge badge-${getClientStatusColor(client.status)}">
+                ${(client.status || 'active').toUpperCase()}
+              </span>
+              ${client.is_blocked ? '<br><span class="badge badge-danger">BLOCKED</span>' : ''}
+            </td>
+            <td>
               <span class="badge badge-${client.role === 'admin' ? 'danger' : 'primary'}">
-                ${client.role}
+                ${client.role.toUpperCase()}
               </span>
             </td>
             <td>${new Date(client.created_at).toLocaleDateString()}</td>
-            <td>${clientStats.count}</td>
-            <td>$${clientStats.totalSpent.toFixed(2)}</td>
             <td>
-              <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-outline-primary" onclick="viewClient('${client.id}')">
+              <div class="d-flex gap-1 flex-wrap">
+                <button class="btn btn-sm btn-outline-primary" onclick="viewClient('${client.id}')" title="View Details">
                   <i class="bi bi-eye"></i>
-                  View
                 </button>
                 ${client.role !== 'admin' ? `
-                  <select class="form-control form-control-sm" onchange="updateUserRole('${client.id}', this.value)" style="min-width: 100px;">
-                    <option value="">Change Role</option>
-                    <option value="client" ${client.role === 'client' ? 'disabled' : ''}>Client</option>
-                    <option value="admin" ${client.role === 'admin' ? 'disabled' : ''}>Admin</option>
-                  </select>
+                  <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-${client.is_blocked ? 'success' : 'warning'}" 
+                            onclick="toggleBlockUser('${client.id}', ${!client.is_blocked})" 
+                            title="${client.is_blocked ? 'Unblock' : 'Block'} User">
+                      <i class="bi bi-${client.is_blocked ? 'unlock' : 'lock'}"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" 
+                            onclick="deleteUser('${client.id}')" 
+                            title="Delete User">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
                 ` : ''}
               </div>
             </td>
@@ -536,6 +551,99 @@
         `
       }
       return 'Not provided'
+    }
+
+    // Toggle block/unblock user
+    window.toggleBlockUser = async function(userId, shouldBlock) {
+      const action = shouldBlock ? 'block' : 'unblock'
+      
+      let reason = null
+      if (shouldBlock) {
+        reason = prompt('Please provide a reason for blocking this user:')
+        if (!reason || reason.trim() === '') {
+          alert('A reason is required to block a user.')
+          return
+        }
+      }
+      
+      if (!confirm(`Are you sure you want to ${action} this user?`)) {
+        return
+      }
+
+      try {
+        const status = shouldBlock ? 'blocked' : 'active'
+        const { error } = await db.updateUserStatus(userId, status, shouldBlock, reason)
+        
+        if (error) {
+          alert(`Error ${action}ing user: ` + error.message)
+          return
+        }
+
+        // Update local data
+        const client = allClients.find(c => c.id === userId)
+        if (client) {
+          client.status = status
+          client.is_blocked = shouldBlock
+          client.blocked_reason = reason
+          client.blocked_at = shouldBlock ? new Date().toISOString() : null
+        }
+
+        // Re-render table
+        applyFilters()
+        
+        showToast(`User ${action}ed successfully`, 'success')
+        
+      } catch (error) {
+        console.error(`Error ${action}ing user:`, error)
+        alert(`Error ${action}ing user: ` + error.message)
+      }
+    }
+
+    // Delete user
+    window.deleteUser = async function(userId) {
+      const client = allClients.find(c => c.id === userId)
+      if (!client) return
+      
+      if (!confirm(`Are you sure you want to permanently delete the user "${client.full_name || client.email}"? This action cannot be undone.`)) {
+        return
+      }
+      
+      // Double confirmation for safety
+      if (!confirm('This will permanently delete all user data including orders and profile. Are you absolutely sure?')) {
+        return
+      }
+
+      try {
+        const { error } = await db.deleteUser(userId)
+        
+        if (error) {
+          alert('Error deleting user: ' + error.message)
+          return
+        }
+
+        // Remove from local data
+        allClients = allClients.filter(c => c.id !== userId)
+        
+        // Update statistics and re-render
+        updateStatistics()
+        applyFilters()
+        
+        showToast('User deleted successfully', 'success')
+        
+      } catch (error) {
+        console.error('Error deleting user:', error)
+        alert('Error deleting user: ' + error.message)
+      }
+    }
+
+    // Get client status color
+    function getClientStatusColor(status) {
+      const colors = {
+        'active': 'success',
+        'inactive': 'secondary',
+        'blocked': 'danger'
+      }
+      return colors[status] || 'success'
     }
 
     function showToast(message, type = 'info') {

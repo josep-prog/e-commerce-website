@@ -1,9 +1,10 @@
 // Supabase client configuration
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import config from './config.js'
 
-// Load environment variables (you'll need to replace these with your actual values)
-const SUPABASE_URL = 'your_supabase_project_url_here'
-const SUPABASE_ANON_KEY = 'your_supabase_anon_key_here'
+// Load environment variables from configuration
+const SUPABASE_URL = config.get('SUPABASE_URL')
+const SUPABASE_ANON_KEY = config.get('SUPABASE_ANON_KEY')
 
 // Initialize Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -210,6 +211,132 @@ export const db = {
       .select()
     
     return { data, error }
+  },
+
+  async updateUserStatus(userId, status, isBlocked = false, blockedReason = null) {
+    const updateData = { 
+      status, 
+      is_blocked: isBlocked,
+      blocked_reason: blockedReason,
+      blocked_at: isBlocked ? new Date().toISOString() : null
+    }
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId)
+      .select()
+    
+    return { data, error }
+  },
+
+  async deleteUser(userId) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId)
+    
+    return { data, error }
+  },
+
+  // Documents
+  async getDocuments() {
+    const { data, error } = await supabase
+      .from('documents')
+      .select(`
+        *,
+        profiles!uploaded_by (
+          id,
+          full_name,
+          email
+        )
+      `)
+      .eq('is_active', true)
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+    
+    return { data, error }
+  },
+
+  async getAllDocuments() {
+    const { data, error } = await supabase
+      .from('documents')
+      .select(`
+        *,
+        profiles!uploaded_by (
+          id,
+          full_name,
+          email
+        )
+      `)
+      .order('created_at', { ascending: false })
+    
+    return { data, error }
+  },
+
+  async getDocument(id) {
+    const { data, error } = await supabase
+      .from('documents')
+      .select(`
+        *,
+        profiles!uploaded_by (
+          id,
+          full_name,
+          email
+        )
+      `)
+      .eq('id', id)
+      .single()
+    
+    return { data, error }
+  },
+
+  async createDocument(documentData) {
+    const { data, error } = await supabase
+      .from('documents')
+      .insert([documentData])
+      .select()
+    
+    return { data, error }
+  },
+
+  async updateDocument(id, documentData) {
+    const { data, error } = await supabase
+      .from('documents')
+      .update(documentData)
+      .eq('id', id)
+      .select()
+    
+    return { data, error }
+  },
+
+  async deleteDocument(id) {
+    const { data, error } = await supabase
+      .from('documents')
+      .delete()
+      .eq('id', id)
+    
+    return { data, error }
+  },
+
+  async incrementDocumentDownload(id) {
+    // First get current count
+    const { data: doc, error: fetchError } = await supabase
+      .from('documents')
+      .select('download_count')
+      .eq('id', id)
+      .single()
+    
+    if (fetchError) return { data: null, error: fetchError }
+    
+    // Then increment it
+    const { data, error } = await supabase
+      .from('documents')
+      .update({ download_count: (doc.download_count || 0) + 1 })
+      .eq('id', id)
+      .select()
+    
+    return { data, error }
   }
 }
 
@@ -237,6 +364,39 @@ export const storage = {
   getPublicUrl(bucketName, fileName) {
     const { data } = supabase.storage
       .from(bucketName)
+      .getPublicUrl(fileName)
+    
+    return data.publicUrl
+  },
+
+  // Document storage
+  async uploadDocument(file, fileName) {
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .upload(fileName, file)
+    
+    return { data, error }
+  },
+
+  async deleteDocument(fileName) {
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .remove([fileName])
+    
+    return { data, error }
+  },
+
+  async downloadDocument(fileName) {
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .download(fileName)
+    
+    return { data, error }
+  },
+
+  getDocumentPublicUrl(fileName) {
+    const { data } = supabase.storage
+      .from('documents')
       .getPublicUrl(fileName)
     
     return data.publicUrl

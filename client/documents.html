@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Bootstrap icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="../css/main.css" />
+  <title>Documents | My Dashboard</title>
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-brand">My Account</a>
+      </div>
+      <nav>
+        <ul class="sidebar-nav">
+          <li class="sidebar-nav-item">
+            <a href="dashboard.html" class="sidebar-nav-link">
+              <i class="bi bi-speedometer2"></i>
+              Dashboard
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="orders.html" class="sidebar-nav-link">
+              <i class="bi bi-cart-check"></i>
+              My Orders
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="documents.html" class="sidebar-nav-link active">
+              <i class="bi bi-file-earmark-text"></i>
+              Documents
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="profile.html" class="sidebar-nav-link">
+              <i class="bi bi-person"></i>
+              My Profile
+            </a>
+          </li>
+          <li class="sidebar-nav-item">
+            <a href="../" class="sidebar-nav-link">
+              <i class="bi bi-house"></i>
+              Back to Store
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <h1 class="dashboard-title">My Documents</h1>
+        <div class="user-profile">
+          <button class="profile-button">
+            <i class="bi bi-person-circle"></i>
+            <span class="user-name">Loading...</span>
+          </button>
+          <div class="user-profile-dropdown">
+            <div class="dropdown-header">
+              <div class="user-info">
+                <div class="user-name">Loading...</div>
+                <div class="user-email">Loading...</div>
+              </div>
+            </div>
+            <div class="dropdown-body">
+              <a href="profile.html" class="dropdown-item">
+                <i class="bi bi-person"></i>
+                Profile
+              </a>
+              <a href="dashboard.html" class="dropdown-item">
+                <i class="bi bi-speedometer2"></i>
+                Dashboard
+              </a>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item logout-button">
+                <i class="bi bi-box-arrow-right"></i>
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="dashboard-content">
+        <!-- Search and Filter -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col">
+                <div class="form-group mb-0">
+                  <label class="form-label">Search Documents</label>
+                  <input type="text" class="form-control" id="search-input" placeholder="Search by title, description...">
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="form-group mb-0">
+                  <label class="form-label">File Type Filter</label>
+                  <select class="form-control" id="type-filter">
+                    <option value="">All Types</option>
+                    <option value="pdf">PDF</option>
+                    <option value="doc">Word Documents</option>
+                    <option value="txt">Text Files</option>
+                    <option value="image">Images</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="form-group mb-0">
+                  <label class="form-label">&nbsp;</label>
+                  <button class="btn btn-primary d-block" onclick="loadDocuments()">
+                    <i class="bi bi-search"></i>
+                    Search
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Documents Grid -->
+        <div class="row" id="documents-container">
+          <div class="col-12 text-center">
+            <p>Loading documents...</p>
+          </div>
+        </div>
+
+        <!-- No Documents Message -->
+        <div class="card" id="no-documents" style="display: none;">
+          <div class="card-body text-center py-5">
+            <i class="bi bi-file-earmark-text" style="font-size: 4rem; color: #ccc;"></i>
+            <h3 class="mt-3 text-muted">No Documents Available</h3>
+            <p class="text-muted">There are currently no documents available for download.</p>
+            <a href="dashboard.html" class="btn btn-primary">
+              <i class="bi bi-arrow-left"></i>
+              Back to Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Document Preview Modal -->
+  <div id="preview-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 90%; max-height: 90%;">
+      <div class="modal-header">
+        <h3 id="preview-title">Document Preview</h3>
+        <button class="modal-close" onclick="closePreviewModal()">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 0;">
+        <iframe id="preview-frame" style="width: 100%; height: 70vh; border: none;"></iframe>
+        <div class="text-center p-3">
+          <button class="btn btn-primary" onclick="downloadCurrentDocument()">
+            <i class="bi bi-download"></i>
+            Download Document
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { requireAuth, getCurrentUser } from '../js/auth.js'
+    import { db, storage } from '../js/supabase.js'
+    import config from '../js/config.js'
+
+    // Check authentication
+    if (!requireAuth()) {
+      throw new Error('Authentication required')
+    }
+
+    let allDocuments = []
+    let filteredDocuments = []
+    let currentPreviewDocument = null
+
+    // Load all documents
+    async function loadDocuments() {
+      try {
+        const { data: documents, error } = await db.getDocuments()
+        
+        if (error) {
+          console.error('Error loading documents:', error)
+          return
+        }
+
+        allDocuments = documents || []
+        applyFilters()
+        
+      } catch (error) {
+        console.error('Error loading documents:', error)
+      }
+    }
+
+    // Apply search and type filters
+    function applyFilters() {
+      const searchTerm = document.getElementById('search-input').value.toLowerCase()
+      const typeFilter = document.getElementById('type-filter').value
+
+      filteredDocuments = allDocuments.filter(doc => {
+        const matchesSearch = !searchTerm || 
+          doc.title.toLowerCase().includes(searchTerm) ||
+          (doc.description || '').toLowerCase().includes(searchTerm)
+        
+        let matchesType = !typeFilter
+        if (typeFilter === 'image') {
+          matchesType = ['jpg', 'jpeg', 'png', 'gif'].includes(doc.file_type.toLowerCase())
+        } else if (typeFilter === 'doc') {
+          matchesType = ['doc', 'docx'].includes(doc.file_type.toLowerCase())
+        } else if (typeFilter) {
+          matchesType = doc.file_type.toLowerCase() === typeFilter
+        }
+
+        return matchesSearch && matchesType
+      })
+
+      renderDocuments()
+    }
+
+    // Render documents grid
+    function renderDocuments() {
+      const container = document.getElementById('documents-container')
+      const noDocsMessage = document.getElementById('no-documents')
+      
+      if (filteredDocuments.length === 0) {
+        container.style.display = 'none'
+        noDocsMessage.style.display = 'block'
+        return
+      }
+
+      container.style.display = 'flex'
+      noDocsMessage.style.display = 'none'
+
+      container.innerHTML = filteredDocuments.map(doc => `
+        <div class="col-md-6 col-lg-4 mb-4">
+          <div class="card h-100 document-card">
+            <div class="card-body">
+              <div class="d-flex align-items-start">
+                <div class="document-icon me-3">
+                  <i class="bi bi-${getFileIcon(doc.file_type)}" style="font-size: 2.5rem; color: ${getFileColor(doc.file_type)};"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <h5 class="card-title">${doc.title}</h5>
+                  <p class="card-text text-muted small">${doc.description || 'No description available'}</p>
+                  
+                  <div class="document-meta">
+                    <div class="d-flex justify-content-between text-muted small mb-2">
+                      <span><i class="bi bi-calendar"></i> ${new Date(doc.created_at).toLocaleDateString()}</span>
+                      <span><i class="bi bi-file-earmark"></i> ${doc.file_type.toUpperCase()}</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted small mb-3">
+                      <span><i class="bi bi-hdd"></i> ${config.formatFileSize(doc.file_size)}</span>
+                      <span><i class="bi bi-download"></i> ${doc.download_count || 0} downloads</span>
+                    </div>
+                  </div>
+                  
+                  <div class="d-flex gap-2">
+                    ${canPreview(doc.file_type) ? `
+                      <button class="btn btn-sm btn-outline-primary" onclick="previewDocument('${doc.id}')">
+                        <i class="bi bi-eye"></i>
+                        Preview
+                      </button>
+                    ` : ''}
+                    <button class="btn btn-sm btn-primary" onclick="downloadDocument('${doc.id}')">
+                      <i class="bi bi-download"></i>
+                      Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('')
+    }
+
+    // Preview document in modal
+    window.previewDocument = function(id) {
+      const doc = allDocuments.find(d => d.id === id)
+      if (!doc) return
+
+      currentPreviewDocument = doc
+      
+      const modal = document.getElementById('preview-modal')
+      const title = document.getElementById('preview-title')
+      const frame = document.getElementById('preview-frame')
+
+      title.textContent = doc.title
+      
+      const publicUrl = storage.getDocumentPublicUrl(doc.file_path)
+      
+      if (doc.file_type.toLowerCase() === 'pdf') {
+        frame.src = publicUrl
+      } else if (['jpg', 'jpeg', 'png', 'gif'].includes(doc.file_type.toLowerCase())) {
+        frame.src = `data:text/html;charset=utf-8,
+          <html><body style="margin:0; display:flex; justify-content:center; align-items:center; height:100vh; background:#f5f5f5;">
+            <img src="${publicUrl}" style="max-width:100%; max-height:100%; object-fit:contain;">
+          </body></html>`
+      } else {
+        frame.src = `data:text/html;charset=utf-8,
+          <html><body style="margin:20px; font-family:Arial, sans-serif;">
+            <h3>Document: ${doc.title}</h3>
+            <p>This file type cannot be previewed in the browser.</p>
+            <p>Please download the file to view its contents.</p>
+            <p><strong>File Type:</strong> ${doc.file_type.toUpperCase()}</p>
+            <p><strong>File Size:</strong> ${config.formatFileSize(doc.file_size)}</p>
+          </body></html>`
+      }
+
+      modal.style.display = 'flex'
+    }
+
+    // Download current document from preview
+    window.downloadCurrentDocument = function() {
+      if (currentPreviewDocument) {
+        downloadDocument(currentPreviewDocument.id)
+      }
+    }
+
+    // Close preview modal
+    window.closePreviewModal = function() {
+      document.getElementById('preview-modal').style.display = 'none'
+      currentPreviewDocument = null
+    }
+
+    // Download document
+    window.downloadDocument = async function(id) {
+      try {
+        const doc = allDocuments.find(d => d.id === id)
+        if (!doc) return
+
+        // Increment download count
+        await db.incrementDocumentDownload(id)
+
+        const publicUrl = storage.getDocumentPublicUrl(doc.file_path)
+        
+        // Create temporary download link
+        const link = document.createElement('a')
+        link.href = publicUrl
+        link.download = doc.file_name
+        link.target = '_blank'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        
+        // Update download count in UI
+        doc.download_count = (doc.download_count || 0) + 1
+        renderDocuments()
+        
+        showSuccess('Document download started!')
+        
+      } catch (error) {
+        console.error('Error downloading document:', error)
+        showError('Failed to download document')
+      }
+    }
+
+    // Check if file can be previewed
+    function canPreview(fileType) {
+      const previewableTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'txt']
+      return previewableTypes.includes(fileType.toLowerCase())
+    }
+
+    // Get file icon based on type
+    function getFileIcon(fileType) {
+      const icons = {
+        'pdf': 'file-pdf',
+        'doc': 'file-word',
+        'docx': 'file-word',
+        'txt': 'file-text',
+        'jpg': 'file-image',
+        'jpeg': 'file-image',
+        'png': 'file-image',
+        'gif': 'file-image'
+      }
+      return icons[fileType.toLowerCase()] || 'file-earmark'
+    }
+
+    // Get file color based on type
+    function getFileColor(fileType) {
+      const colors = {
+        'pdf': '#dc3545',
+        'doc': '#007bff',
+        'docx': '#007bff',
+        'txt': '#6c757d',
+        'jpg': '#28a745',
+        'jpeg': '#28a745',
+        'png': '#28a745',
+        'gif': '#28a745'
+      }
+      return colors[fileType.toLowerCase()] || '#6c757d'
+    }
+
+    // Utility functions
+    function showSuccess(message) {
+      // Simple success notification
+      const toast = document.createElement('div')
+      toast.className = 'toast-notification success'
+      toast.innerHTML = `
+        <i class="bi bi-check-circle"></i>
+        <span>${message}</span>
+      `
+      document.body.appendChild(toast)
+      
+      setTimeout(() => toast.classList.add('show'), 100)
+      setTimeout(() => {
+        toast.classList.remove('show')
+        setTimeout(() => toast.remove(), 300)
+      }, 3000)
+    }
+
+    function showError(message) {
+      alert('Error: ' + message)
+    }
+
+    // Event listeners
+    document.getElementById('search-input').addEventListener('input', applyFilters)
+    document.getElementById('type-filter').addEventListener('change', applyFilters)
+
+    // Click outside modal to close
+    document.getElementById('preview-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'preview-modal') {
+        closePreviewModal()
+      }
+    })
+
+    // Make functions global
+    window.loadDocuments = loadDocuments
+
+    // Initialize
+    loadDocuments()
+
+    // Load user profile data
+    async function loadUserProfile() {
+      const user = getCurrentUser()
+      if (!user) return
+
+      const userName = user.user_metadata?.full_name || user.email.split('@')[0]
+      
+      // Update user name in header
+      document.querySelectorAll('.user-name').forEach(el => {
+        el.textContent = userName
+      })
+      
+      document.querySelectorAll('.user-email').forEach(el => {
+        el.textContent = user.email
+      })
+    }
+
+    // Initialize user profile
+    loadUserProfile()
+  </script>
+
+  <style>
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      width: 90%;
+      max-height: 90%;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .document-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      border: 1px solid #e0e0e0;
+    }
+
+    .document-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .document-icon {
+      flex-shrink: 0;
+    }
+
+    .document-meta {
+      font-size: 0.875rem;
+    }
+
+    .toast-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      border-radius: 8px;
+      padding: 15px 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      z-index: 10001;
+    }
+
+    .toast-notification.success {
+      border-left: 4px solid #28a745;
+      color: #155724;
+    }
+
+    .toast-notification.show {
+      transform: translateX(0);
+    }
+
+    .d-flex { display: flex; }
+    .gap-1 { gap: 0.25rem; }
+    .gap-2 { gap: 0.5rem; }
+    .align-items-start { align-items: flex-start; }
+    .align-items-center { align-items: center; }
+    .justify-content-between { justify-content: space-between; }
+    .flex-grow-1 { flex-grow: 1; }
+    .me-3 { margin-right: 1rem; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .mb-3 { margin-bottom: 1rem; }
+    .mb-4 { margin-bottom: 1.5rem; }
+    .py-5 { padding-top: 3rem; padding-bottom: 3rem; }
+    .text-center { text-align: center; }
+    .text-muted { color: #6c757d; }
+    .small { font-size: 0.875rem; }
+    .flex-wrap { flex-wrap: wrap; }
+  </style>
+</body>
+
+</html>

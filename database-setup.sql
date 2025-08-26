@@ -18,6 +18,11 @@ CREATE TABLE IF NOT EXISTS profiles (
   role TEXT DEFAULT 'client' CHECK (role IN ('admin', 'client')),
   phone TEXT,
   address JSONB,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'blocked')),
+  is_blocked BOOLEAN DEFAULT false,
+  blocked_reason TEXT,
+  blocked_at TIMESTAMP WITH TIME ZONE,
+  last_login TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   
@@ -223,6 +228,42 @@ CREATE POLICY "Users can manage their own cart" ON cart
   WITH CHECK (auth.uid() = user_id);
 
 -- ==================================================
+-- DOCUMENTS TABLE (for admin-uploaded documents)
+-- ==================================================
+CREATE TABLE IF NOT EXISTS documents (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  file_name TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  file_size INTEGER NOT NULL CHECK (file_size > 0),
+  file_type TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  is_public BOOLEAN DEFAULT true,
+  download_count INTEGER DEFAULT 0,
+  uploaded_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS on documents
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+
+-- Documents policies
+CREATE POLICY "Active documents are viewable by everyone" ON documents
+  FOR SELECT USING (is_active = true AND is_public = true);
+
+CREATE POLICY "Only admins can modify documents" ON documents
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM profiles 
+      WHERE profiles.id = auth.uid() 
+      AND profiles.role = 'admin'
+    )
+  );
+
+-- ==================================================
 -- FUNCTIONS AND TRIGGERS
 -- ==================================================
 
@@ -249,6 +290,9 @@ CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders
     FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 CREATE TRIGGER update_cart_updated_at BEFORE UPDATE ON cart 
+    FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+CREATE TRIGGER update_documents_updated_at BEFORE UPDATE ON documents 
     FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 -- Function to automatically create user profile after signup
@@ -321,6 +365,13 @@ CREATE INDEX IF NOT EXISTS order_items_product_id_idx ON order_items(product_id)
 -- Cart indexes
 CREATE INDEX IF NOT EXISTS cart_user_id_idx ON cart(user_id);
 CREATE INDEX IF NOT EXISTS cart_product_id_idx ON cart(product_id);
+
+-- Documents indexes
+CREATE INDEX IF NOT EXISTS documents_is_active_idx ON documents(is_active);
+CREATE INDEX IF NOT EXISTS documents_is_public_idx ON documents(is_public);
+CREATE INDEX IF NOT EXISTS documents_uploaded_by_idx ON documents(uploaded_by);
+CREATE INDEX IF NOT EXISTS documents_created_at_idx ON documents(created_at);
+CREATE INDEX IF NOT EXISTS documents_file_type_idx ON documents(file_type);
 
 -- ==================================================
 -- STORAGE SETUP INSTRUCTIONS
