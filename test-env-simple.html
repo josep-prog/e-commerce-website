@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environment Test</title>
+</head>
+<body>
+    <h1>Environment Test</h1>
+    <div id="result"></div>
+
+    <script src="js/env.js"></script>
+    <script>
+        console.log('Testing window.ENV:', window.ENV);
+        
+        const resultDiv = document.getElementById('result');
+        
+        if (window.ENV && window.ENV.SUPABASE_URL) {
+            resultDiv.innerHTML = '<p style="color: green;">✅ Environment loaded successfully!</p>' +
+                                '<p>SUPABASE_URL: ' + window.ENV.SUPABASE_URL + '</p>';
+        } else {
+            resultDiv.innerHTML = '<p style="color: red;">❌ Environment not loaded!</p>' +
+                                '<p>window.ENV: ' + (window.ENV ? JSON.stringify(window.ENV) : 'undefined') + '</p>';
+        }
+    </script>
+</body>
+</html>

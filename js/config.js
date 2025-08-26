@@ -8,6 +8,11 @@ class Config {
   }
 
   loadConfig() {
+    // Debug logging
+    console.log('Config.loadConfig() called');
+    console.log('window.ENV available?', !!window.ENV);
+    console.log('window.ENV:', window.ENV);
+    
     // In a real application with a build process, these would be loaded from process.env
     // For now, we'll use a configuration object that should be populated with actual values
     this.config = {

@@ -1,13 +1,23 @@
 // Supabase client configuration
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import config from './config.js'
 
-// Load environment variables from configuration
-const SUPABASE_URL = config.get('SUPABASE_URL')
-const SUPABASE_ANON_KEY = config.get('SUPABASE_ANON_KEY')
+// Debug logging
+console.log('supabase.js loading...');
+console.log('window.ENV available:', !!window.ENV);
+console.log('window.ENV:', window.ENV);
+
+// Get environment variables directly from window.ENV 
+// This should be set by env.js which loads first
+const SUPABASE_URL = window.ENV?.SUPABASE_URL || 'https://spgcogdnkeuvkwggltod.supabase.co'
+const SUPABASE_ANON_KEY = window.ENV?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwZ2NvZ2Rua2V1dmt3Z2dsdG9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMDc3MzUsImV4cCI6MjA3MTc4MzczNX0.uBy8VntCQtkMZqzSFiMSNYhkZFVBEraNlMiW7_kJvhA'
+
+console.log('SUPABASE_URL:', SUPABASE_URL);
+console.log('SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY);
 
 // Initialize Supabase client
+console.log('Initializing Supabase client with URL:', SUPABASE_URL);
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+console.log('Supabase client initialized successfully:', supabase);
 
 // Authentication helpers
 export const auth = {
@@ -371,32 +381,36 @@ export const storage = {
 
   // Document storage
   async uploadDocument(file, fileName) {
+    const bucketName = window.ENV?.SUPABASE_DOCUMENTS_BUCKET || 'bulk'
     const { data, error } = await supabase.storage
-      .from('documents')
+      .from(bucketName)
       .upload(fileName, file)
     
     return { data, error }
   },
 
   async deleteDocument(fileName) {
+    const bucketName = window.ENV?.SUPABASE_DOCUMENTS_BUCKET || 'bulk'
     const { data, error } = await supabase.storage
-      .from('documents')
+      .from(bucketName)
       .remove([fileName])
     
     return { data, error }
   },
 
   async downloadDocument(fileName) {
+    const bucketName = window.ENV?.SUPABASE_DOCUMENTS_BUCKET || 'bulk'
     const { data, error } = await supabase.storage
-      .from('documents')
+      .from(bucketName)
       .download(fileName)
     
     return { data, error }
   },
 
   getDocumentPublicUrl(fileName) {
+    const bucketName = window.ENV?.SUPABASE_DOCUMENTS_BUCKET || 'bulk'
     const { data } = supabase.storage
-      .from('documents')
+      .from(bucketName)
       .getPublicUrl(fileName)
     
     return data.publicUrl

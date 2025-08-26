@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Test</title>
+</head>
+<body>
+    <h1>Supabase Connection Test</h1>
+    <div id="result"></div>
+
+    <script src="js/env.js"></script>
+    <script type="module">
+        import { auth } from './js/supabase.js'
+        
+        const resultDiv = document.getElementById('result')
+        
+        try {
+            console.log('Environment variables:', window.ENV)
+            
+            // Test Supabase client initialization
+            const user = await auth.getCurrentUser()
+            resultDiv.innerHTML = '<p style="color: green;">✅ Supabase client initialized successfully!</p><p>Current user: ' + (user ? user.email : 'No user logged in') + '</p>'
+            
+        } catch (error) {
+            console.error('Supabase initialization error:', error)
+            resultDiv.innerHTML = '<p style="color: red;">❌ Error: ' + error.message + '</p>'
+        }
+    </script>
+</body>
+</html>
